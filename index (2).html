@@ -1,0 +1,297 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Evrenler Kadar Çok Sevdiğim Sevgilime - Bu Site Senin İçin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: black; 
+            touch-action: none;
+        }
+        canvas { 
+            display: block; 
+            width: 100vw; 
+            height: 100vh; 
+        }
+        .compliment {
+            position: absolute;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            font-size: 3vmin;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        let stars = [];
+        let planets = [];
+        let comets = [];
+
+        // Romantic compliments in Turkish
+        const complimentTexts = [
+            'Sen bir yıldız gibisin, evrenin en parlak ışığı!',
+            'Gözlerin galaksilerden daha güzel, sevgilim.',
+            'Kalbim seninle bir başka atıyor, evrenler kadar büyük!',
+            'Seninle geçirdiğim her an bir kuyruklu yıldız gibi parlıyor.',
+            'Evrenin tüm güzellikleri sende toplanmış, aşkım.',
+            'Sen bir gezegen olsan, ben senin uydun olurdum.',
+            'Gülüşünle bütün yıldızlar sönük kalır.',
+            'Sana olan sevgim galaksiler ötesine uzanıyor.',
+            'Seninle her an bir uzay macerası gibi heyecanlı.',
+            'Evrenin en güzel sırrı sensin, sevgilim.'
+        ];
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight, WEBGL);
+            ortho(-width / 2, width / 2, height / 2, -height / 2, 0, 10000);
+            noStroke();
+
+            // Lighting for realism
+            ambientLight(50);
+            directionalLight(255, 255, 255, -0.5, 0.5, -1);
+
+            // Create stars
+            for (let i = 0; i < 300; i++) {
+                stars.push({
+                    x: random(-width / 2, width / 2),
+                    y: random(-height / 2, height / 2),
+                    z: random(-100, 0), // Slight depth for subtle 3D effect
+                    size: random(1, 3),
+                    twinkle: random(0.5, 1)
+                });
+            }
+
+            // Create planets with no overlap
+            let attempts = 0;
+            while (planets.length < 12 && attempts < 1000) {
+                let size = random(15, 40);
+                let x = random(-width / 2 + size, width / 2 - size);
+                let y = random(-height / 2 + size, height / 2 - size);
+                let overlaps = false;
+                for (let p of planets) {
+                    let d = dist(x, y, p.x, p.y);
+                    if (d < (size + p.size) * 1.5) { // Margin for better spacing
+                        overlaps = true;
+                        break;
+                    }
+                }
+                if (!overlaps) {
+                    let hasRings = random() < 0.3;
+                    let baseColor = color(random(100, 255), random(100, 255), random(100, 255));
+                    // Create procedural texture for realism
+                    let tex = createGraphics(128, 128);
+                    tex.noStroke();
+                    for (let tx = 0; tx < 128; tx++) {
+                        for (let ty = 0; ty < 128; ty++) {
+                            let n = noise(tx * 0.05, ty * 0.05) * 100;
+                            tex.fill(red(baseColor) + n - 50, green(baseColor) + n - 50, blue(baseColor) + n - 50);
+                            tex.rect(tx, ty, 1, 1);
+                        }
+                    }
+                    planets.push({
+                        x: x,
+                        y: y,
+                        z: 0,
+                        size: size,
+                        texture: tex,
+                        hasRings: hasRings,
+                        ringWidth: hasRings ? random(size * 0.5, size * 0.8) : 0,
+                        rotAngle: random(TWO_PI),
+                        rotSpeed: random(0.005, 0.02)
+                    });
+                }
+                attempts++;
+            }
+        }
+
+        function draw() {
+            background(0);
+
+            // Draw gradient sky background using strips
+            let numStrips = 50;
+            for (let i = 0; i < numStrips; i++) {
+                let y1 = map(i, 0, numStrips, height / 2, -height / 2);
+                let y2 = map(i + 1, 0, numStrips, height / 2, -height / 2);
+                let c1 = lerpColor(color(0, 0, 50), color(0, 0, 0), i / numStrips);
+                let c2 = lerpColor(color(0, 0, 50), color(0, 0, 0), (i + 1) / numStrips);
+                noStroke();
+                beginShape();
+                fill(c1);
+                vertex(-width / 2, y1, 1000);
+                vertex(width / 2, y1, 1000);
+                fill(c2);
+                vertex(width / 2, y2, 1000);
+                vertex(-width / 2, y2, 1000);
+                endShape(CLOSE);
+            }
+
+            // Draw stars with twinkling
+            for (let star of stars) {
+                star.twinkle += random(-0.1, 0.1);
+                star.twinkle = constrain(star.twinkle, 0.5, 1);
+                push();
+                translate(star.x, star.y, star.z);
+                fill(255, 255, 255, 255 * star.twinkle);
+                sphere(star.size / 2);
+                pop();
+            }
+
+            // Draw planets as 3D spheres
+            for (let planet of planets) {
+                push();
+                translate(planet.x, planet.y, planet.z);
+                planet.rotAngle += planet.rotSpeed;
+                rotateY(planet.rotAngle);
+                texture(planet.texture);
+                sphere(planet.size);
+                // Draw rings if present
+                if (planet.hasRings) {
+                    push();
+                    rotateX(PI / 2 + 0.3); // Slight tilt for realism
+                    noFill();
+                    stroke(200, 200, 200, 150);
+                    strokeWeight(2);
+                    ellipse(0, 0, planet.size * 2 + planet.ringWidth, planet.size * 2 + planet.ringWidth * 0.5);
+                    stroke(200, 200, 200, 100);
+                    ellipse(0, 0, planet.size * 2 + planet.ringWidth * 1.2, planet.size * 2 + planet.ringWidth * 0.6);
+                    pop();
+                }
+                pop();
+            }
+
+            // Update and draw comets
+            for (let i = comets.length - 1; i >= 0; i--) {
+                let comet = comets[i];
+                comet.x += comet.vx;
+                comet.y += comet.vy;
+                comet.life--;
+                // Draw comet head
+                push();
+                translate(comet.x, comet.y, comet.z);
+                fill(255, 255, 200);
+                sphere(2.5);
+                pop();
+                // Draw comet tail
+                stroke(255, 255, 200, 150);
+                strokeWeight(2);
+                line(comet.x, comet.y, comet.z, comet.x - comet.vx * 5, comet.y - comet.vy * 5, comet.z);
+                // Update compliment position (adjust for coordinate system)
+                if (comet.complimentDiv) {
+                    let screenX = comet.x + width / 2;
+                    let screenY = -comet.y + height / 2;
+                    comet.complimentDiv.style.left = screenX + 'px';
+                    comet.complimentDiv.style.top = screenY + 'px';
+                    let opacity = map(comet.life, 0, 120, 0, 1);
+                    comet.complimentDiv.style.opacity = opacity;
+                }
+                if (comet.life <= 0) {
+                    if (comet.complimentDiv) {
+                        document.body.removeChild(comet.complimentDiv);
+                    }
+                    comets.splice(i, 1);
+                }
+            }
+        }
+
+        function handleClick(mx, my) {
+            // Convert mouse to world coordinates
+            let wx = mx - width / 2;
+            let wy = - (my - height / 2); // Flip y
+            for (let planet of planets) {
+                let d = dist(wx, wy, planet.x, planet.y);
+                if (d < planet.size) {
+                    // Create comet starting from planet position
+                    let angle = random(TWO_PI);
+                    let comet = {
+                        x: planet.x,
+                        y: planet.y,
+                        z: 10, // Slightly in front
+                        vx: cos(angle) * 4,
+                        vy: sin(angle) * 4,
+                        life: 120
+                    };
+                    // Create sliding compliment
+                    let complimentDiv = document.createElement('div');
+                    complimentDiv.className = 'compliment';
+                    complimentDiv.textContent = random(complimentTexts);
+                    let screenX = planet.x + width / 2;
+                    let screenY = -planet.y + height / 2;
+                    complimentDiv.style.left = screenX + 'px';
+                    complimentDiv.style.top = screenY + 'px';
+                    document.body.appendChild(complimentDiv);
+                    comet.complimentDiv = complimentDiv;
+                    comets.push(comet);
+                    break;
+                }
+            }
+        }
+
+        function mousePressed() {
+            handleClick(mouseX, mouseY);
+        }
+
+        function touchStarted() {
+            if (touches.length > 0) {
+                let touch = touches[0];
+                handleClick(touch.x, touch.y);
+                return false;
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            ortho(-width / 2, width / 2, height / 2, -height / 2, 0, 10000);
+            // Reposition elements
+            stars = [];
+            planets = [];
+            setup(); // Re-run setup to reposition
+        }
+    </script>
+</body>
+</html>
