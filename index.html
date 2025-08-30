@@ -25,7 +25,7 @@
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
             pointer-events: none;
             white-space: nowrap;
-            transform: translate(-50%, -50%); /* Center text on comet */
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -58,12 +58,11 @@
             ambientLight(50);
             directionalLight(255, 255, 255, -0.5, 0.5, -1);
 
-            // Create stars
-            let edgeMargin = 0.1 * min(width, height);
+            // Create stars across entire canvas, including corners
             for (let i = 0; i < 300; i++) {
                 stars.push({
-                    x: random(-width / 2 + edgeMargin, width / 2 - edgeMargin),
-                    y: random(-height / 2 + edgeMargin, height / 2 - edgeMargin),
+                    x: random(-width / 2, width / 2), // Full canvas width
+                    y: random(-height / 2, height / 2), // Full canvas height
                     z: random(-100, 0),
                     size: random(1, 3),
                     twinkle: random(0.5, 1)
@@ -71,6 +70,7 @@
             }
 
             // Create planets with no overlap and away from edges
+            let edgeMargin = 0.1 * min(width, height);
             let attempts = 0;
             while (planets.length < 12 && attempts < 1000) {
                 let size = random(15, 40);
@@ -201,7 +201,9 @@
             let wx = mx - width / 2;
             let wy = -(my - height / 2);
             for (let planet of planets) {
-                let d = dist(wx, wy, planet.x, planet.y);
+                let d = dist(wx, wy
+
+, planet.x, planet.y);
                 if (d < planet.size) {
                     // Calculate velocity toward center (0, 0)
                     let angle = atan2(-planet.y, -planet.x);
@@ -222,7 +224,7 @@
                     complimentDiv.style.left = screenX + 'px';
                     complimentDiv.style.top = screenY + 'px';
                     document.body.appendChild(complimentDiv);
-                    comet.complimentDiv = complimentDiv; // Correctly assign
+                    comet.complimentDiv = complimentDiv;
                     comets.push(comet);
                     break;
                 }
@@ -246,7 +248,7 @@
             ortho(-width / 2, width / 2, height / 2, -height / 2, 0, 10000);
             stars = [];
             planets = [];
-            comets = []; // Clear comets to prevent orphaned divs
+            comets = [];
             // Remove existing compliment divs
             let existingCompliments = document.getElementsByClassName('compliment');
             while (existingCompliments.length > 0) {
