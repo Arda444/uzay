@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -64,6 +25,7 @@
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
             pointer-events: none;
             white-space: nowrap;
+            transform: translate(-50%, -50%); /* Center text on comet */
         }
     </style>
 </head>
@@ -97,26 +59,27 @@
             directionalLight(255, 255, 255, -0.5, 0.5, -1);
 
             // Create stars
+            let edgeMargin = 0.1 * min(width, height);
             for (let i = 0; i < 300; i++) {
                 stars.push({
-                    x: random(-width / 2, width / 2),
-                    y: random(-height / 2, height / 2),
-                    z: random(-100, 0), // Slight depth for subtle 3D effect
+                    x: random(-width / 2 + edgeMargin, width / 2 - edgeMargin),
+                    y: random(-height / 2 + edgeMargin, height / 2 - edgeMargin),
+                    z: random(-100, 0),
                     size: random(1, 3),
                     twinkle: random(0.5, 1)
                 });
             }
 
-            // Create planets with no overlap
+            // Create planets with no overlap and away from edges
             let attempts = 0;
             while (planets.length < 12 && attempts < 1000) {
                 let size = random(15, 40);
-                let x = random(-width / 2 + size, width / 2 - size);
-                let y = random(-height / 2 + size, height / 2 - size);
+                let x = random(-width / 2 + edgeMargin + size, width / 2 - edgeMargin - size);
+                let y = random(-height / 2 + edgeMargin + size, height / 2 - edgeMargin - size);
                 let overlaps = false;
                 for (let p of planets) {
                     let d = dist(x, y, p.x, p.y);
-                    if (d < (size + p.size) * 1.5) { // Margin for better spacing
+                    if (d < (size + p.size) * 2) {
                         overlaps = true;
                         break;
                     }
@@ -124,7 +87,6 @@
                 if (!overlaps) {
                     let hasRings = random() < 0.3;
                     let baseColor = color(random(100, 255), random(100, 255), random(100, 255));
-                    // Create procedural texture for realism
                     let tex = createGraphics(128, 128);
                     tex.noStroke();
                     for (let tx = 0; tx < 128; tx++) {
@@ -153,7 +115,7 @@
         function draw() {
             background(0);
 
-            // Draw gradient sky background using strips
+            // Draw gradient sky background
             let numStrips = 50;
             for (let i = 0; i < numStrips; i++) {
                 let y1 = map(i, 0, numStrips, height / 2, -height / 2);
@@ -182,7 +144,7 @@
                 pop();
             }
 
-            // Draw planets as 3D spheres
+            // Draw planets
             for (let planet of planets) {
                 push();
                 translate(planet.x, planet.y, planet.z);
@@ -190,10 +152,9 @@
                 rotateY(planet.rotAngle);
                 texture(planet.texture);
                 sphere(planet.size);
-                // Draw rings if present
                 if (planet.hasRings) {
                     push();
-                    rotateX(PI / 2 + 0.3); // Slight tilt for realism
+                    rotateX(PI / 2 + 0.3);
                     noFill();
                     stroke(200, 200, 200, 150);
                     strokeWeight(2);
@@ -205,29 +166,26 @@
                 pop();
             }
 
-            // Update and draw comets
+            // Draw comets
             for (let i = comets.length - 1; i >= 0; i--) {
                 let comet = comets[i];
                 comet.x += comet.vx;
                 comet.y += comet.vy;
                 comet.life--;
-                // Draw comet head
                 push();
                 translate(comet.x, comet.y, comet.z);
                 fill(255, 255, 200);
                 sphere(2.5);
                 pop();
-                // Draw comet tail
                 stroke(255, 255, 200, 150);
                 strokeWeight(2);
                 line(comet.x, comet.y, comet.z, comet.x - comet.vx * 5, comet.y - comet.vy * 5, comet.z);
-                // Update compliment position (adjust for coordinate system)
                 if (comet.complimentDiv) {
                     let screenX = comet.x + width / 2;
                     let screenY = -comet.y + height / 2;
                     comet.complimentDiv.style.left = screenX + 'px';
                     comet.complimentDiv.style.top = screenY + 'px';
-                    let opacity = map(comet.life, 0, 120, 0, 1);
+                    let opacity = map(comet.life, 0, 240, 0, 1);
                     comet.complimentDiv.style.opacity = opacity;
                 }
                 if (comet.life <= 0) {
@@ -240,23 +198,22 @@
         }
 
         function handleClick(mx, my) {
-            // Convert mouse to world coordinates
             let wx = mx - width / 2;
-            let wy = - (my - height / 2); // Flip y
+            let wy = -(my - height / 2);
             for (let planet of planets) {
                 let d = dist(wx, wy, planet.x, planet.y);
                 if (d < planet.size) {
-                    // Create comet starting from planet position
-                    let angle = random(TWO_PI);
+                    // Calculate velocity toward center (0, 0)
+                    let angle = atan2(-planet.y, -planet.x);
+                    let speed = 2; // Slow speed
                     let comet = {
                         x: planet.x,
                         y: planet.y,
-                        z: 10, // Slightly in front
-                        vx: cos(angle) * 4,
-                        vy: sin(angle) * 4,
-                        life: 120
+                        z: 10,
+                        vx: cos(angle) * speed,
+                        vy: sin(angle) * speed,
+                        life: 240 // Extended lifetime (4 seconds at 60 FPS)
                     };
-                    // Create sliding compliment
                     let complimentDiv = document.createElement('div');
                     complimentDiv.className = 'compliment';
                     complimentDiv.textContent = random(complimentTexts);
@@ -265,7 +222,7 @@
                     complimentDiv.style.left = screenX + 'px';
                     complimentDiv.style.top = screenY + 'px';
                     document.body.appendChild(complimentDiv);
-                    comet.complimentDiv = complimentDiv;
+                    comet.complimentDiv = complimentDiv; // Correctly assign
                     comets.push(comet);
                     break;
                 }
@@ -287,10 +244,15 @@
         function windowResized() {
             resizeCanvas(windowWidth, windowHeight);
             ortho(-width / 2, width / 2, height / 2, -height / 2, 0, 10000);
-            // Reposition elements
             stars = [];
             planets = [];
-            setup(); // Re-run setup to reposition
+            comets = []; // Clear comets to prevent orphaned divs
+            // Remove existing compliment divs
+            let existingCompliments = document.getElementsByClassName('compliment');
+            while (existingCompliments.length > 0) {
+                existingCompliments[0].remove();
+            }
+            setup();
         }
     </script>
 </body>
